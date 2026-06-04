@@ -5,6 +5,7 @@ by orchestrating the `circleci` and `npm` CLIs. For users with many packages to 
 
 ## Requirements
 
+- Go `1.26.4` or later (only needed to build from source)
 - `circleci` CLI pre-release (tested with `1.0.38499-pre`), authenticated (`circleci settings set token <token>` or `CIRCLE_TOKEN`). Grab a build from the [releases page](https://github.com/CircleCI-Public/circleci-cli/releases).
 - Node.js `22.14.0` or later
 - `npm` `11.15.0` or later
