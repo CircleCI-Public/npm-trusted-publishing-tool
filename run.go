@@ -4,9 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/charmbracelet/huh"
 )
+
+// minTrustInterval is the minimum delay between npm trust calls during a bulk
+// run. npm's bulk-usage guidance recommends a ~2s sleep between calls to avoid
+// rate limiting (about 80 packages fit in the 5-minute 2FA skip window):
+// https://docs.npmjs.com/cli/v11/commands/npm-trust#bulk-usage
+const minTrustInterval = 2 * time.Second
 
 // runState carries choices remembered across iterations. Publish permissions are
 // asked once for the whole run; context choices are scoped to one org and reset
@@ -24,6 +31,10 @@ type runState struct {
 	// don't change during a run, so we don't re-list per project.
 	orgContextsLoaded bool
 	orgContexts       []Context
+
+	// lastTrust is when the previous npm trust call finished, used to pace
+	// calls for the whole run (not reset at org boundaries).
+	lastTrust time.Time
 }
 
 type result struct {
@@ -150,10 +161,23 @@ func process(e projectEntry, orgCount int, state *runState, dryRun bool) (string
 		DryRun:       dryRun,
 	}
 
+	// Pace trust calls per npm's bulk guidance. Measuring from the previous
+	// call lets the interactive prompts between projects count toward the gap,
+	// so we sleep only the remainder. Dry-run doesn't hit the trust endpoint.
+	if !dryRun && !state.lastTrust.IsZero() {
+		if wait := minTrustInterval - time.Since(state.lastTrust); wait > 0 {
+			time.Sleep(wait)
+		}
+	}
+
 	// npm writes its output (incl. 2FA prompt and results) straight to the
 	// terminal; success is judged by exit code.
-	if err := runNpmTrust(cfg); err != nil {
-		return "", fmt.Errorf("npm trust: %w", err)
+	trustErr := runNpmTrust(cfg)
+	if !dryRun {
+		state.lastTrust = time.Now()
+	}
+	if trustErr != nil {
+		return "", fmt.Errorf("npm trust: %w", trustErr)
 	}
 	return "", nil
 }
