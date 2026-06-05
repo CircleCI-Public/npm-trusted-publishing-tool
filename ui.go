@@ -8,19 +8,22 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-// selectPipelineDefinition asks the user to pick one pipeline definition.
+// selectPipelineDefinition asks the user to pick one pipeline definition. When
+// there is only one, it is selected automatically with an informative message.
 func selectPipelineDefinition(defs []PipelineDefinition) (PipelineDefinition, error) {
 	if len(defs) == 0 {
 		return PipelineDefinition{}, errors.New("no pipeline definitions found")
 	}
+	if len(defs) == 1 {
+		d := defs[0]
+		fmt.Printf("Using the only pipeline definition: %s\n", pipelineLabel(d))
+		return d, nil
+	}
+
 	opts := make([]huh.Option[string], len(defs))
 	byID := make(map[string]PipelineDefinition, len(defs))
 	for i, d := range defs {
-		label := d.Name
-		if d.Description != "" {
-			label = fmt.Sprintf("%s — %s", d.Name, d.Description)
-		}
-		opts[i] = huh.NewOption(label, d.ID)
+		opts[i] = huh.NewOption(pipelineLabel(d), d.ID)
 		byID[d.ID] = d
 	}
 
@@ -35,6 +38,14 @@ func selectPipelineDefinition(defs []PipelineDefinition) (PipelineDefinition, er
 		return PipelineDefinition{}, err
 	}
 	return byID[id], nil
+}
+
+// pipelineLabel renders a pipeline definition for display.
+func pipelineLabel(d PipelineDefinition) string {
+	if d.Description != "" {
+		return fmt.Sprintf("%s — %s", d.Name, d.Description)
+	}
+	return d.Name
 }
 
 // selectContexts asks the user to pick zero or more contexts (filterable).
