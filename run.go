@@ -89,8 +89,10 @@ func run(projectsFile string, dryRun bool) int {
 	return 0
 }
 
-// resolveProjects returns the entries to process. With no file (or an empty
-// file) it returns a single empty entry: single-directory mode.
+// resolveProjects returns the entries to process. With no --projects file it
+// returns a single empty entry: single-directory mode. When a file is given but
+// contains no projects, that's treated as an error rather than falling back to
+// single-directory mode.
 func resolveProjects(path string) ([]projectEntry, error) {
 	if path == "" {
 		return []projectEntry{{}}, nil
@@ -100,7 +102,7 @@ func resolveProjects(path string) ([]projectEntry, error) {
 		return nil, err
 	}
 	if len(entries) == 0 {
-		return []projectEntry{{}}, nil
+		return nil, fmt.Errorf("no projects found in %s", path)
 	}
 	return entries, nil
 }

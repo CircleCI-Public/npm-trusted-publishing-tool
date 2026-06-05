@@ -72,14 +72,15 @@ func TestResolveProjectsSingleDir(t *testing.T) {
 	}
 }
 
-// An empty (comments-only) file also falls back to single-dir mode.
+// An explicit --projects file with no usable entries is an error, not a
+// fall-back to single-dir mode.
 func TestResolveProjectsEmptyFile(t *testing.T) {
 	entries, err := resolveProjects(writeTemp(t, "# only comments\n\n"))
-	if err != nil {
-		t.Fatalf("resolveProjects() error = %v", err)
+	if err == nil {
+		t.Fatalf("expected error for empty projects file, got entries=%+v", entries)
 	}
-	if len(entries) != 1 || entries[0] != (projectEntry{}) {
-		t.Errorf("got entries=%+v, want single-dir fallback", entries)
+	if entries != nil {
+		t.Errorf("expected nil entries on error, got %+v", entries)
 	}
 }
 
