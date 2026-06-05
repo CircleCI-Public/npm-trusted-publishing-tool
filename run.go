@@ -19,6 +19,11 @@ type runState struct {
 	contextsDecided  bool
 	reuseContexts    bool
 	sharedContextIDs []string
+
+	// The org's context list is fetched once and cached for the org; contexts
+	// don't change during a run, so we don't re-list per project.
+	orgContextsLoaded bool
+	orgContexts       []Context
 }
 
 type result struct {
@@ -43,10 +48,13 @@ func run(projectsFile string, dryRun bool) int {
 	n := 0
 
 	for _, g := range groups {
-		// Context choices are per-org: reset at each org boundary.
+		// Context choices and the cached context list are per-org: reset at each
+		// org boundary.
 		state.contextsDecided = false
 		state.reuseContexts = false
 		state.sharedContextIDs = nil
+		state.orgContextsLoaded = false
+		state.orgContexts = nil
 
 		for _, e := range g.entries {
 			n++
@@ -154,10 +162,16 @@ func resolveContexts(proj Project, orgCount int, state *runState) ([]string, err
 		return state.sharedContextIDs, nil
 	}
 
-	ctxs, err := listContexts(proj.OrganizationSlug)
-	if err != nil {
-		return nil, err
+	if !state.orgContextsLoaded {
+		ctxs, err := listContexts(proj.OrganizationSlug)
+		if err != nil {
+			return nil, err
+		}
+		state.orgContexts = ctxs
+		state.orgContextsLoaded = true
 	}
+	ctxs := state.orgContexts
+
 	ids, err := selectContexts(ctxs)
 	if err != nil {
 		return nil, err
