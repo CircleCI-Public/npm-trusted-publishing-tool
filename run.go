@@ -102,7 +102,8 @@ func resolveProjects(path string) ([]projectEntry, error) {
 		return nil, err
 	}
 	if len(entries) == 0 {
-		return nil, fmt.Errorf("no projects found in %s", path)
+		return nil, fmt.Errorf("no projects found in %s; expected one project per line as "+
+			"\"package-name,project-slug\" (e.g. @acme/widget,gh/acme/widget)", path)
 	}
 	return entries, nil
 }
