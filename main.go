@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"strings"
 )
 
 const usage = `npm trusted publishing onboarding
@@ -43,8 +44,9 @@ var (
 	commit  = ""
 )
 
-// buildVersion returns the version with a short commit hash when one is
-// available, e.g. "dev (a1b2c3d)" or "0.0.0-main.20260608.b64c21b (b64c21b)".
+// buildVersion returns the version with a short commit hash appended when one
+// is available and not already part of the version, e.g. "dev (a1b2c3d)".
+// Release versions already embed the sha, so the suffix is skipped for them.
 func buildVersion() string {
 	c := commit
 	if c == "" {
@@ -59,7 +61,7 @@ func buildVersion() string {
 	if len(c) > 7 {
 		c = c[:7]
 	}
-	if c == "" {
+	if c == "" || strings.Contains(version, c) {
 		return version
 	}
 	return version + " (" + c + ")"
