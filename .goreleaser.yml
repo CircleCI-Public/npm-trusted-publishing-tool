@@ -1,0 +1,48 @@
+version: 2
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+# macOS codesigning + notarization, copied from the circleci-cli setup.
+# Quill signs/notarizes from any OS (incl. Linux), so no macOS runner is needed.
+# Enabled only when QUILL_SIGN_P12 is present (provided by the macos-codesigning context).
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "QUILL_SIGN_P12" }}'
+      sign:
+        certificate: '{{ envOrDefault "QUILL_SIGN_P12" "" }}'
+      notarize:
+        issuer_id: '{{ envOrDefault "QUILL_NOTARY_ISSUER" "" }}'
+        key_id: '{{ envOrDefault "QUILL_NOTARY_KEY_ID" "" }}'
+        key: '{{ envOrDefault "QUILL_NOTARY_KEY" "" }}'
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: CircleCI-Public
+    name: npm-trusted-publishing-tool
+  # Set per-build by CI (see .circleci/config.yml):
+  #   main branch    -> prerelease=false, make_latest=true   (official, shown as Latest)
+  #   other branches -> prerelease=true,  make_latest=false  (prerelease, not Latest)
+  prerelease: '{{ envOrDefault "GORELEASER_PRERELEASE" "false" }}'
+  make_latest: '{{ envOrDefault "GORELEASER_MAKE_LATEST" "false" }}'

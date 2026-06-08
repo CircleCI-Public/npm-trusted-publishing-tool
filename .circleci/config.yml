@@ -1,0 +1,95 @@
+version: 2.1
+
+orbs:
+  go: circleci/go@3.0.4
+
+executors:
+  go:
+    docker:
+      - image: cimg/go:1.26.4
+
+jobs:
+  test:
+    executor: go
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+      - run:
+          name: Run tests
+          command: go test ./...
+
+  build:
+    executor: go
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - run:
+          name: Cross-platform build (no publish)
+          command: curl -sfL https://goreleaser.com/static/run | bash -s -- build --snapshot --clean
+      - store_artifacts:
+          path: dist
+
+  publish:
+    executor: go
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - run:
+          name: Tag a nightly-style version
+          # GoReleaser publishes from a git tag and only signs/notarizes in real
+          # release mode (snapshot skips signing). So mint a commit/date-based
+          # semver tag at HEAD. main = official+latest, any other branch = prerelease.
+          command: |
+            SHA="$(git rev-parse --short HEAD)"
+            DATE="$(date -u +%Y%m%d)"
+            if [ "$CIRCLE_BRANCH" = "main" ]; then
+              CHANNEL="main"
+              PRERELEASE="false"
+              MAKE_LATEST="true"
+            else
+              # Sanitize branch name to valid semver prerelease identifiers.
+              CHANNEL="$(printf '%s' "$CIRCLE_BRANCH" | tr -c 'a-zA-Z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//')"
+              PRERELEASE="true"
+              MAKE_LATEST="false"
+            fi
+            VERSION="0.0.0-${CHANNEL}.${DATE}.${SHA}"
+            git tag "$VERSION"
+            # Export for the release step (and for GoReleaser's release config).
+            {
+              echo "export GORELEASER_PRERELEASE=$PRERELEASE"
+              echo "export GORELEASER_MAKE_LATEST=$MAKE_LATEST"
+            } >> "$BASH_ENV"
+            echo "Tagged $VERSION (prerelease=$PRERELEASE, make_latest=$MAKE_LATEST)"
+      - run:
+          name: Build, codesign, and publish to GitHub release
+          # GoReleaser cross-compiles, signs/notarizes the macOS binaries via Quill,
+          # and creates the GitHub release. Credentials come from the contexts below:
+          #   devex-release      -> GITHUB_TOKEN (create the release)
+          #   macos-codesigning  -> QUILL_SIGN_P12 / QUILL_NOTARY_* (sign + notarize)
+          command: curl -sfL https://goreleaser.com/static/run | bash -s -- release --clean
+      - store_artifacts:
+          path: dist
+
+workflows:
+  ci:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
+      - publish:
+          requires:
+            - build
+          context:
+            - devex-release
+            - macos-codesigning
+          # Only publish from main (official) and release/* branches (prereleases).
+          filters:
+            branches:
+              only:
+                - main
+                - /^release\/.*/
