@@ -71,7 +71,8 @@ jobs:
           name: Tag a nightly-style version
           # GoReleaser publishes from a git tag and only signs/notarizes in real
           # release mode (snapshot skips signing). So mint a commit/date-based
-          # semver tag at HEAD. main = official+latest, any other branch = prerelease.
+          # semver tag at HEAD. This job only runs on main and release/* (see the
+          # workflow filter): main = official+latest, release/* = prerelease.
           command: |
             SHA="$(git rev-parse --short HEAD)"
             DATE="$(date -u +%Y%m%d)"
