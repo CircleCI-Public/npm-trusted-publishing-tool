@@ -24,6 +24,7 @@ Flags:
                      package from ./package.json; circleci infers the project from
                      the git remote).
   --dry-run          Pass --dry-run to npm trust; makes no changes.
+  --version          Show version and exit.
   -h, --help         Show this help.
 
 Notes:
@@ -33,14 +34,24 @@ Notes:
   rest of that org; the choice is re-prompted when the org changes.
 `
 
+// version is set at build time via -ldflags "-X main.version=...".
+// GoReleaser populates it for released binaries; it stays "dev" otherwise.
+var version = "dev"
+
 func main() {
 	var projectsFile string
-	var dryRun, help bool
+	var dryRun, help, showVersion bool
 	flag.StringVar(&projectsFile, "projects", "", "path to projects list file")
 	flag.BoolVar(&dryRun, "dry-run", false, "pass --dry-run to npm trust")
+	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.BoolVar(&help, "help", false, "show help")
 	flag.Usage = func() { fmt.Print(usage) }
 	flag.Parse()
+
+	if showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	if help {
 		fmt.Print(usage)
