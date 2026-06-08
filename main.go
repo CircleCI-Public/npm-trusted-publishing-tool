@@ -36,35 +36,39 @@ Notes:
   rest of that org; the choice is re-prompted when the org changes.
 `
 
-// Build metadata, set via -ldflags "-X main.version=... -X main.commit=...".
-// GoReleaser populates both for released binaries. For a plain `go build` the
-// commit is recovered from the embedded VCS info and version stays "dev".
-var (
-	version = "dev"
-	commit  = ""
-)
+// version is the release tag, set via -ldflags "-X main.version=...". GoReleaser
+// sets it for released binaries; it stays "dev" otherwise. The commit hash and
+// dirty-tree flag come from the binary's embedded VCS info (debug.ReadBuildInfo),
+// the same way the circleci CLI does it, so no separate -X main.commit is needed.
+var version = "dev"
 
-// buildVersion returns the version with a short commit hash appended when one
-// is available and not already part of the version, e.g. "dev (a1b2c3d)".
-// Release versions already embed the sha, so the suffix is skipped for them.
+// buildVersion returns "<version> (<commit>)", with a "-dirty" marker when the
+// binary was built from an uncommitted tree. Release tags already embed the sha
+// (e.g. 0.0.0-main.20260608.b64c21b), so the suffix is omitted when the version
+// already contains it.
 func buildVersion() string {
-	c := commit
-	if c == "" {
-		if info, ok := debug.ReadBuildInfo(); ok {
-			for _, s := range info.Settings {
-				if s.Key == "vcs.revision" {
-					c = s.Value
-				}
+	var commit string
+	var modified bool
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range bi.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				commit = s.Value
+			case "vcs.modified":
+				modified = s.Value == "true"
 			}
 		}
 	}
-	if len(c) > 7 {
-		c = c[:7]
+	if len(commit) > 7 {
+		commit = commit[:7]
 	}
-	if c == "" || strings.Contains(version, c) {
+	if commit == "" || (strings.Contains(version, commit) && !modified) {
 		return version
 	}
-	return version + " (" + c + ")"
+	if modified {
+		commit += "-dirty"
+	}
+	return version + " (" + commit + ")"
 }
 
 func main() {

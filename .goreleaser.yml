@@ -7,6 +7,9 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+    # Inject only the version; the commit comes from Go's embedded VCS info.
+    ldflags:
+      - -s -w -X main.version={{.Version}}
     goos:
       - linux
       - darwin
