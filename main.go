@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 )
 
 const usage = `npm trusted publishing onboarding
@@ -24,6 +26,7 @@ Flags:
                      package from ./package.json; circleci infers the project from
                      the git remote).
   --dry-run          Pass --dry-run to npm trust; makes no changes.
+  --version          Show version and exit.
   -h, --help         Show this help.
 
 Notes:
@@ -33,14 +36,55 @@ Notes:
   rest of that org; the choice is re-prompted when the org changes.
 `
 
+// version is the release tag, set via -ldflags "-X main.version=...". GoReleaser
+// sets it for released binaries; it stays "dev" otherwise. The commit hash and
+// dirty-tree flag come from the binary's embedded VCS info (debug.ReadBuildInfo),
+// the same way the circleci CLI does it, so no separate -X main.commit is needed.
+var version = "dev"
+
+// buildVersion returns "<version> (<commit>)", with a "-dirty" marker when the
+// binary was built from an uncommitted tree. Release tags already embed the sha
+// (e.g. 0.0.0-main.20260608.b64c21b), so the suffix is omitted when the version
+// already contains it.
+func buildVersion() string {
+	var commit string
+	var modified bool
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range bi.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				commit = s.Value
+			case "vcs.modified":
+				modified = s.Value == "true"
+			}
+		}
+	}
+	if len(commit) > 7 {
+		commit = commit[:7]
+	}
+	if commit == "" || (strings.Contains(version, commit) && !modified) {
+		return version
+	}
+	if modified {
+		commit += "-dirty"
+	}
+	return version + " (" + commit + ")"
+}
+
 func main() {
 	var projectsFile string
-	var dryRun, help bool
+	var dryRun, help, showVersion bool
 	flag.StringVar(&projectsFile, "projects", "", "path to projects list file")
 	flag.BoolVar(&dryRun, "dry-run", false, "pass --dry-run to npm trust")
+	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.BoolVar(&help, "help", false, "show help")
 	flag.Usage = func() { fmt.Print(usage) }
 	flag.Parse()
+
+	if showVersion {
+		fmt.Println(buildVersion())
+		return
+	}
 
 	if help {
 		fmt.Print(usage)
