@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 )
 
 const usage = `npm trusted publishing onboarding
@@ -34,9 +35,35 @@ Notes:
   rest of that org; the choice is re-prompted when the org changes.
 `
 
-// version is set at build time via -ldflags "-X main.version=...".
-// GoReleaser populates it for released binaries; it stays "dev" otherwise.
-var version = "dev"
+// Build metadata, set via -ldflags "-X main.version=... -X main.commit=...".
+// GoReleaser populates both for released binaries. For a plain `go build` the
+// commit is recovered from the embedded VCS info and version stays "dev".
+var (
+	version = "dev"
+	commit  = ""
+)
+
+// buildVersion returns the version with a short commit hash when one is
+// available, e.g. "dev (a1b2c3d)" or "0.0.0-main.20260608.b64c21b (b64c21b)".
+func buildVersion() string {
+	c := commit
+	if c == "" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			for _, s := range info.Settings {
+				if s.Key == "vcs.revision" {
+					c = s.Value
+				}
+			}
+		}
+	}
+	if len(c) > 7 {
+		c = c[:7]
+	}
+	if c == "" {
+		return version
+	}
+	return version + " (" + c + ")"
+}
 
 func main() {
 	var projectsFile string
@@ -49,7 +76,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println(version)
+		fmt.Println(buildVersion())
 		return
 	}
 
