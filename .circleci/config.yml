@@ -86,7 +86,7 @@ jobs:
               PRERELEASE="true"
               MAKE_LATEST="false"
             fi
-            VERSION="0.0.0-${CHANNEL}.${DATE}.${SHA}"
+            VERSION="1.0.0-${CHANNEL}.${DATE}.${SHA}"
             git tag "$VERSION"
             {
               echo "export GORELEASER_PRERELEASE=$PRERELEASE"

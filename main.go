@@ -44,7 +44,7 @@ var version = "dev"
 
 // buildVersion returns "<version> (<commit>)", with a "-dirty" marker when the
 // binary was built from an uncommitted tree. Release tags already embed the sha
-// (e.g. 0.0.0-main.20260608.b64c21b), so the suffix is omitted when the version
+// (e.g. 1.0.0-main.20260608.b64c21b), so the suffix is omitted when the version
 // already contains it.
 func buildVersion() string {
 	var commit string
