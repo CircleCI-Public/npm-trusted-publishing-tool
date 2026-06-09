@@ -71,9 +71,9 @@ jobs:
           name: Tag the release version
           # Version is MAJOR.MINOR.<CIRCLE_BUILD_NUM>: bump MAJOR.MINOR by hand below;
           # the CI build number is the patch. GoReleaser signs/publishes from this
-          # tag. This job only runs on main and release/* (see the workflow filter):
-          #   main      -> 1.0.<build>            (clean tag => official, Latest)
-          #   release/* -> 1.0.<build>-<channel>  (semver prerelease => not Latest)
+          # tag. This job only runs on main and next (see the workflow filter):
+          #   main -> 1.0.<build>       (clean tag => official, Latest)
+          #   next -> 1.0.<build>-next  (semver prerelease => not Latest)
           # `prerelease: auto` in .goreleaser.yml derives that from the tag shape.
           command: |
             BASE="1.0"
@@ -81,9 +81,8 @@ jobs:
               VERSION="${BASE}.${CIRCLE_BUILD_NUM}"
               MAKE_LATEST="true"
             else
-              # Sanitize branch name to a valid semver prerelease identifier.
-              CHANNEL="$(printf '%s' "$CIRCLE_BRANCH" | tr -c 'a-zA-Z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//')"
-              VERSION="${BASE}.${CIRCLE_BUILD_NUM}-${CHANNEL}"
+              # next: prerelease, not Latest.
+              VERSION="${BASE}.${CIRCLE_BUILD_NUM}-next"
               MAKE_LATEST="false"
             fi
             git tag "$VERSION"
@@ -112,9 +111,9 @@ workflows:
           context:
             - devex-release
             - macos-codesigning
-          # Only publish from main (official) and release/* branches (prereleases).
+          # Only publish from main (official, Latest) and next (prerelease).
           filters:
             branches:
               only:
                 - main
-                - /^release\/.*/
+                - next
