@@ -42,10 +42,9 @@ Notes:
 // the same way the circleci CLI does it, so no separate -X main.commit is needed.
 var version = "dev"
 
-// buildVersion returns "<version> (<commit>)", with a "-dirty" marker when the
-// binary was built from an uncommitted tree. Release tags already embed the sha
-// (e.g. 1.0.0-main.b64c21b), so the suffix is omitted when the version
-// already contains it.
+// buildVersion returns "<version> (<commit>)", e.g. "1.0.42 (a1b2c3d)", with a
+// "-dirty" marker when built from an uncommitted tree. The commit is appended
+// unless the version string already contains it.
 func buildVersion() string {
 	var commit string
 	var modified bool

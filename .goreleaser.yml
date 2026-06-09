@@ -44,8 +44,9 @@ release:
   github:
     owner: CircleCI-Public
     name: npm-trusted-publishing-tool
-  # Set per-build by CI (see .circleci/config.yml):
-  #   main branch    -> prerelease=false, make_latest=true   (official, shown as Latest)
-  #   other branches -> prerelease=true,  make_latest=false  (prerelease, not Latest)
-  prerelease: '{{ envOrDefault "GORELEASER_PRERELEASE" "false" }}'
+  # prerelease is derived from the tag (auto): main's clean 1.0.<build> tag is a
+  # full release; a branch's 1.0.<build>-<channel> tag is a semver prerelease.
+  # make_latest is set per-build by CI: main=true, other branches=false
+  # (prerelease is not templateable, but make_latest is). See .circleci/config.yml.
+  prerelease: auto
   make_latest: '{{ envOrDefault "GORELEASER_MAKE_LATEST" "false" }}'
