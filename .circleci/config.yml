@@ -75,7 +75,6 @@ jobs:
           # workflow filter): main = official+latest, release/* = prerelease.
           command: |
             SHA="$(git rev-parse --short HEAD)"
-            DATE="$(date -u +%Y%m%d)"
             if [ "$CIRCLE_BRANCH" = "main" ]; then
               CHANNEL="main"
               PRERELEASE="false"
@@ -86,7 +85,7 @@ jobs:
               PRERELEASE="true"
               MAKE_LATEST="false"
             fi
-            VERSION="1.0.0-${CHANNEL}.${DATE}.${SHA}"
+            VERSION="1.0.0-${CHANNEL}.${SHA}"
             git tag "$VERSION"
             {
               echo "export GORELEASER_PRERELEASE=$PRERELEASE"
