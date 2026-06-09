@@ -68,6 +68,16 @@ jobs:
     steps:
       - setup
       - run:
+          name: DEBUG - is GITHUB_TOKEN reaching the job?
+          # Temporary diagnostic (release/test-token branch only). Prints the
+          # token's owner login and effective repo perms without leaking the value.
+          command: |
+            [ -n "$GITHUB_TOKEN" ] || { echo "GITHUB_TOKEN EMPTY"; exit 1; }
+            echo "len=${#GITHUB_TOKEN}"
+            echo "user=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | jq -r '.login // "AUTH FAILED"')"
+            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/CircleCI-Public/npm-trusted-publishing-tool | jq '{full_name, permissions}'
+      - run:
           name: Tag a nightly-style version
           # GoReleaser publishes from a git tag and only signs/notarizes in real
           # release mode (snapshot skips signing). So mint a commit/date-based
