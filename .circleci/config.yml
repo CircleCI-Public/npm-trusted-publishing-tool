@@ -68,31 +68,26 @@ jobs:
     steps:
       - setup
       - run:
-          name: Tag a nightly-style version
-          # GoReleaser publishes from a git tag and only signs/notarizes in real
-          # release mode (snapshot skips signing). So mint a commit/date-based
-          # semver tag at HEAD. This job only runs on main and release/* (see the
-          # workflow filter): main = official+latest, release/* = prerelease.
+          name: Tag the release version
+          # Version is MAJOR.MINOR.<CIRCLE_BUILD_NUM>: bump MAJOR.MINOR by hand below;
+          # the CI build number is the patch. GoReleaser signs/publishes from this
+          # tag. This job only runs on main and next (see the workflow filter):
+          #   main -> 1.0.<build>       (clean tag => official, Latest)
+          #   next -> 1.0.<build>-next  (semver prerelease => not Latest)
+          # `prerelease: auto` in .goreleaser.yml derives that from the tag shape.
           command: |
-            SHA="$(git rev-parse --short HEAD)"
-            DATE="$(date -u +%Y%m%d)"
+            BASE="1.0"
             if [ "$CIRCLE_BRANCH" = "main" ]; then
-              CHANNEL="main"
-              PRERELEASE="false"
+              VERSION="${BASE}.${CIRCLE_BUILD_NUM}"
               MAKE_LATEST="true"
             else
-              # Sanitize branch name to valid semver prerelease identifiers.
-              CHANNEL="$(printf '%s' "$CIRCLE_BRANCH" | tr -c 'a-zA-Z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//')"
-              PRERELEASE="true"
+              # next: prerelease, not Latest.
+              VERSION="${BASE}.${CIRCLE_BUILD_NUM}-next"
               MAKE_LATEST="false"
             fi
-            VERSION="0.0.0-${CHANNEL}.${DATE}.${SHA}"
             git tag "$VERSION"
-            {
-              echo "export GORELEASER_PRERELEASE=$PRERELEASE"
-              echo "export GORELEASER_MAKE_LATEST=$MAKE_LATEST"
-            } >> "$BASH_ENV"
-            echo "Tagged $VERSION (prerelease=$PRERELEASE, make_latest=$MAKE_LATEST)"
+            echo "export GORELEASER_MAKE_LATEST=$MAKE_LATEST" >> "$BASH_ENV"
+            echo "Tagged $VERSION (make_latest=$MAKE_LATEST)"
       - goreleaser:
           # Cross-compiles, signs/notarizes the macOS binaries via Quill, and
           # creates the GitHub release. Credentials come from the contexts below:
@@ -116,9 +111,9 @@ workflows:
           context:
             - devex-release
             - macos-codesigning
-          # Only publish from main (official) and release/* branches (prereleases).
+          # Only publish from main (official, Latest) and next (prerelease).
           filters:
             branches:
               only:
                 - main
-                - /^release\/.*/
+                - next
