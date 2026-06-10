@@ -11,6 +11,12 @@ by orchestrating the `circleci` and `npm` CLIs. For users with many packages to 
 - `npm` `11.15.0` or later
 - A valid npm token with **write** access and **2FA enabled** (the first `npm trust` call prompts for your 2FA code)
 
+## Download
+
+Download the binary for your platform from the
+[releases page](https://github.com/CircleCI-Public/npm-trusted-publishing-tool/releases),
+extract the archive, and put `npm-trusted-publishing-tool` on your `PATH`.
+
 ## Build
 
 ```sh
