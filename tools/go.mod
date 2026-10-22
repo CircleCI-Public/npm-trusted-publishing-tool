@@ -1,6 +1,6 @@
 module github.com/CircleCI-Public/npm-trusted-publishing-tool/tools
 
-go 1.26.4
+go 1.26.10
 
 tool github.com/goreleaser/goreleaser/v2
 
